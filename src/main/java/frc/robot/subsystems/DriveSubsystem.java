@@ -49,13 +49,15 @@ public class DriveSubsystem extends SubsystemBase {
         }
     }
 
+    private final LightsSubsystem lightsSubsystem;
+
     // The motors on the left side of the drive.
-    private final SparkMax        leftPrimaryMotor   = new SparkMax(DriveConstants.LEFT_MOTOR_PORT, MotorType.kBrushless);
-    private final SparkMax        leftFollowerMotor  = new SparkMax(DriveConstants.LEFT_MOTOR_PORT + 1, MotorType.kBrushless);
+    private final SparkMax        leftPrimaryMotor   = new SparkMax(DriveConstants.LEFT_MOTOR_CAN_ID, MotorType.kBrushless);
+    private final SparkMax        leftFollowerMotor  = new SparkMax(DriveConstants.LEFT_MOTOR_CAN_ID + 1, MotorType.kBrushless);
 
     // The motors on the right side of the drive.
-    private final SparkMax        rightPrimaryMotor  = new SparkMax(DriveConstants.RIGHT_MOTOR_PORT, MotorType.kBrushless);
-    private final SparkMax        rightFollowerMotor = new SparkMax(DriveConstants.RIGHT_MOTOR_PORT + 1, MotorType.kBrushless);
+    private final SparkMax        rightPrimaryMotor  = new SparkMax(DriveConstants.RIGHT_MOTOR_CAN_ID, MotorType.kBrushless);
+    private final SparkMax        rightFollowerMotor = new SparkMax(DriveConstants.RIGHT_MOTOR_CAN_ID + 1, MotorType.kBrushless);
 
     private double                leftSpeed          = 0;
     private double                rightSpeed         = 0;
@@ -76,7 +78,9 @@ public class DriveSubsystem extends SubsystemBase {
     private double                gyroPitchOffset    = 0;
 
     /** Creates a new DriveSubsystem. */
-    public DriveSubsystem() {
+    public DriveSubsystem(LightsSubsystem lightsSubsystem) {
+
+        this.lightsSubsystem = lightsSubsystem;
 
         /*
          * Configure Left Side Motors
@@ -301,6 +305,8 @@ public class DriveSubsystem extends SubsystemBase {
 
     @Override
     public void periodic() {
+
+        lightsSubsystem.setDriveMotorSpeeds(leftSpeed, rightSpeed);
 
         SmartDashboard.putNumber("Right Motor", rightSpeed);
         SmartDashboard.putNumber("Left  Motor", leftSpeed);

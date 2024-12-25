@@ -31,16 +31,15 @@ public final class Constants {
         }
     }
 
-
-
     public static final class DriveConstants {
 
         public static enum DriveMode {
             TANK, ARCADE, SINGLE_STICK_LEFT, SINGLE_STICK_RIGHT;
         }
 
-        public static final int     LEFT_MOTOR_PORT      = 10;
-        public static final int     RIGHT_MOTOR_PORT     = 20;
+        // NOTE: Follower motors are at CAN_ID+1
+        public static final int     LEFT_MOTOR_CAN_ID    = 10;
+        public static final int     RIGHT_MOTOR_CAN_ID   = 20;
 
         public static final boolean LEFT_MOTOR_INVERTED  = false;
         public static final boolean RIGHT_MOTOR_INVERTED = true;
@@ -57,4 +56,9 @@ public final class Constants {
         public static final double  DRIVE_SCALING_SLOW   = .3;
     }
 
+    public static final class LightsConstants {
+
+        public static final int LED_STRING_PWM_PORT = 0;
+        public static final int LED_STRING_LENGTH   = 60;
+    }
 }
