@@ -66,6 +66,21 @@ public class AutoCommand extends SequentialCommandGroup {
 
             // Drive forward 1m at .2 speed
             addCommands(new DriveOnHeadingCommand(0, .2, 100, driveSubsystem));
+            return;
+
+        case BOX:
+
+            // Set the current heading to zero, the gyro could have drifted while
+            // waiting for auto to start.
+            driveSubsystem.setGyroHeading(0);
+
+            // Drive out and then one box
+            addCommands(new DriveOnHeadingCommand(0, .4, 200, false, driveSubsystem));
+            addCommands(new DriveOnHeadingCommand(270, .4, 100, false, driveSubsystem));
+            addCommands(new DriveOnHeadingCommand(180, .4, 100, false, driveSubsystem));
+            addCommands(new DriveOnHeadingCommand(90, .4, 100, false, driveSubsystem));
+            addCommands(new DriveOnHeadingCommand(0, .4, 100, driveSubsystem));
+            return;
         }
     }
 }

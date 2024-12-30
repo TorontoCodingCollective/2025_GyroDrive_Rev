@@ -10,6 +10,13 @@ import com.revrobotics.spark.config.SparkMaxConfig;
 import com.studica.frc.AHRS;
 
 import edu.wpi.first.util.sendable.SendableBuilder;
+import edu.wpi.first.wpilibj.RobotBase;
+import edu.wpi.first.wpilibj.RobotController;
+import edu.wpi.first.wpilibj.simulation.DifferentialDrivetrainSim;
+import edu.wpi.first.wpilibj.simulation.DifferentialDrivetrainSim.KitbotGearing;
+import edu.wpi.first.wpilibj.simulation.DifferentialDrivetrainSim.KitbotMotor;
+import edu.wpi.first.wpilibj.simulation.DifferentialDrivetrainSim.KitbotWheelSize;
+import edu.wpi.first.wpilibj.smartdashboard.Field2d;
 import edu.wpi.first.wpilibj.smartdashboard.SmartDashboard;
 import edu.wpi.first.wpilibj2.command.SubsystemBase;
 import frc.robot.Constants.DriveConstants;
@@ -49,33 +56,44 @@ public class DriveSubsystem extends SubsystemBase {
         }
     }
 
-    private final LightsSubsystem lightsSubsystem;
+    private final LightsSubsystem     lightsSubsystem;
 
     // The motors on the left side of the drive.
-    private final SparkMax        leftPrimaryMotor   = new SparkMax(DriveConstants.LEFT_MOTOR_CAN_ID, MotorType.kBrushless);
-    private final SparkMax        leftFollowerMotor  = new SparkMax(DriveConstants.LEFT_MOTOR_CAN_ID + 1, MotorType.kBrushless);
+    private final SparkMax            leftPrimaryMotor   = new SparkMax(DriveConstants.LEFT_MOTOR_CAN_ID, MotorType.kBrushless);
+    private final SparkMax            leftFollowerMotor  = new SparkMax(DriveConstants.LEFT_MOTOR_CAN_ID + 1,
+        MotorType.kBrushless);
 
     // The motors on the right side of the drive.
-    private final SparkMax        rightPrimaryMotor  = new SparkMax(DriveConstants.RIGHT_MOTOR_CAN_ID, MotorType.kBrushless);
-    private final SparkMax        rightFollowerMotor = new SparkMax(DriveConstants.RIGHT_MOTOR_CAN_ID + 1, MotorType.kBrushless);
+    private final SparkMax            rightPrimaryMotor  = new SparkMax(DriveConstants.RIGHT_MOTOR_CAN_ID, MotorType.kBrushless);
+    private final SparkMax            rightFollowerMotor = new SparkMax(DriveConstants.RIGHT_MOTOR_CAN_ID + 1,
+        MotorType.kBrushless);
 
-    private double                leftSpeed          = 0;
-    private double                rightSpeed         = 0;
+    private double                    leftSpeed          = 0;
+    private double                    rightSpeed         = 0;
 
     // Encoders
-    private final RelativeEncoder leftEncoder        = leftPrimaryMotor.getEncoder();
-    private final RelativeEncoder rightEncoder       = rightPrimaryMotor.getEncoder();
+    private final RelativeEncoder     leftEncoder        = leftPrimaryMotor.getEncoder();
+    private final RelativeEncoder     rightEncoder       = rightPrimaryMotor.getEncoder();
 
-    private double                leftEncoderOffset  = 0;
-    private double                rightEncoderOffset = 0;
+    private double                    leftEncoderOffset  = 0;
+    private double                    rightEncoderOffset = 0;
 
     /*
      * Gyro
      */
-    private NavXGyro              navXGyro           = new NavXGyro();
+    private NavXGyro                  navXGyro           = new NavXGyro();
 
-    private double                gyroHeadingOffset  = 0;
-    private double                gyroPitchOffset    = 0;
+    private double                    gyroHeadingOffset  = 0;
+    private double                    gyroPitchOffset    = 0;
+
+    /*
+     * Simulation fields
+     */
+    private Field2d                   field              = null;
+    private DifferentialDrivetrainSim drivetrainSim      = null;
+    private double                    simAngle           = 0;
+    private double                    simLeftEncoder     = 0;
+    private double                    simRightEncoder    = 0;
 
     /** Creates a new DriveSubsystem. */
     public DriveSubsystem(LightsSubsystem lightsSubsystem) {
@@ -110,6 +128,20 @@ public class DriveSubsystem extends SubsystemBase {
 
         // Reset the Gyro Heading
         resetGyro();
+
+        // Add the field elements for robot simulations
+        if (RobotBase.isSimulation()) {
+
+            field = new Field2d();
+            SmartDashboard.putData("Field", field);
+
+            drivetrainSim = DifferentialDrivetrainSim.createKitbotSim(
+                KitbotMotor.kDoubleNEOPerSide, // Double NEO per side
+                KitbotGearing.k10p71, // 10.71:1
+                KitbotWheelSize.kSixInch, // 6" diameter wheels.
+                null // No measurement noise.
+            );
+        }
     }
 
     /**
@@ -166,6 +198,9 @@ public class DriveSubsystem extends SubsystemBase {
 
         double gyroYawAngle = navXGyro.getYaw();
 
+        // Add the simulated angle to support simulation
+        gyroYawAngle += simAngle;
+
         if (DriveConstants.GYRO_INVERTED) {
             gyroYawAngle *= -1;
         }
@@ -173,6 +208,9 @@ public class DriveSubsystem extends SubsystemBase {
         // adjust by the offset that was saved when the gyro
         // heading was last set.
         gyroYawAngle += gyroHeadingOffset;
+
+        // Round to two decimal places
+        gyroYawAngle  = Math.round(gyroYawAngle * 100) / 100;
 
         // The angle can be positive or negative and extends beyond 360 degrees.
         double heading = gyroYawAngle % 360.0;
@@ -182,7 +220,7 @@ public class DriveSubsystem extends SubsystemBase {
         }
 
         // round to two decimals
-        return Math.round(heading * 100) / 100d;
+        return heading;
     }
 
     /**
@@ -245,7 +283,7 @@ public class DriveSubsystem extends SubsystemBase {
      * @return the left drive encoder
      */
     public double getLeftEncoder() {
-        return leftEncoder.getPosition() + leftEncoderOffset;
+        return leftEncoder.getPosition() + simLeftEncoder + leftEncoderOffset;
     }
 
     /**
@@ -272,14 +310,18 @@ public class DriveSubsystem extends SubsystemBase {
      * @return the right drive encoder
      */
     public double getRightEncoder() {
-        return rightEncoder.getPosition() + rightEncoderOffset;
+        return rightEncoder.getPosition() + simRightEncoder + rightEncoderOffset;
     }
 
     /** Resets the drive encoders to zero. */
     public void resetEncoders() {
 
-        leftEncoderOffset  = -leftEncoder.getPosition();
-        rightEncoderOffset = -rightEncoder.getPosition();
+        // Reset the offsets so that the encoders are zeroed.
+        leftEncoderOffset  = 0;
+        leftEncoderOffset  = -getLeftEncoder();
+
+        rightEncoderOffset = 0;
+        rightEncoderOffset = -getRightEncoder();
     }
 
     /**
@@ -321,6 +363,42 @@ public class DriveSubsystem extends SubsystemBase {
         SmartDashboard.putData("Gyro", navXGyro);
         SmartDashboard.putNumber("Gyro Heading", getHeading());
         SmartDashboard.putNumber("Gyro Pitch", getPitch());
+
+    }
+
+    @Override
+    public void simulationPeriodic() {
+
+        if (RobotController.isSysActive()) {
+
+            // When the robot is enabled, calculate the position
+            // Set the inputs to the system.
+            drivetrainSim.setInputs(
+                leftSpeed * RobotController.getInputVoltage(),
+                rightSpeed * RobotController.getInputVoltage());
+
+            // Advance the model by 20 ms. Note that if you are running this
+            // subsystem in a separate thread or have changed the nominal timestep
+            // of TimedRobot, this value needs to match it.
+            drivetrainSim.update(0.02);
+
+            // Move the robot on the simulated field
+            field.setRobotPose(drivetrainSim.getPose());
+        }
+        else {
+            // When the robot is disabled, allow the user to move
+            // the robot on the simulation field.
+            drivetrainSim.setPose(field.getRobotPose());
+        }
+
+        // Update the gyro simulation offset
+        // NOTE: the pose has the opposite rotational direction from the system
+        // pose degrees are counter-clockwise positive. weird.
+        simAngle        = -drivetrainSim.getPose().getRotation().getDegrees();
+
+        // Update the encoders with the simulation offsets.
+        simLeftEncoder  = drivetrainSim.getLeftPositionMeters() * 100 / DriveConstants.CM_PER_ENCODER_COUNT;
+        simRightEncoder = drivetrainSim.getRightPositionMeters() * 100 / DriveConstants.CM_PER_ENCODER_COUNT;
     }
 
     @Override
@@ -335,5 +413,4 @@ public class DriveSubsystem extends SubsystemBase {
 
         return sb.toString();
     }
-
 }

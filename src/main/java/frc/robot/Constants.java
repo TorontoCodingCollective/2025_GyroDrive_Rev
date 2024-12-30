@@ -27,7 +27,7 @@ public final class Constants {
     public static final class AutoConstants {
 
         public static enum AutoPattern {
-            DO_NOTHING, DRIVE_FORWARD
+            DO_NOTHING, DRIVE_FORWARD, BOX
         }
     }
 
@@ -49,7 +49,7 @@ public final class Constants {
         public static final boolean GYRO_INVERTED        = false;
 
         /** Proportional gain for gyro pid tracking */
-        public static final double  GYRO_PID_KP          = 0.001;
+        public static final double  GYRO_PID_KP          = 0.01;
 
         public static final double  DRIVE_SCALING_BOOST  = 1;
         public static final double  DRIVE_SCALING_NORMAL = .6;
