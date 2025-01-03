@@ -81,7 +81,7 @@ public class DriveSubsystem extends SubsystemBase {
     /*
      * Gyro
      */
-    private NavXGyro                  navXGyro           = new NavXGyro();
+    private NavXGyro                  navXGyro           = null;
 
     private double                    gyroHeadingOffset  = 0;
     private double                    gyroPitchOffset    = 0;
@@ -142,6 +142,9 @@ public class DriveSubsystem extends SubsystemBase {
                 null // No measurement noise.
             );
         }
+        else {
+            navXGyro = new NavXGyro();
+        }
     }
 
     /**
@@ -172,7 +175,9 @@ public class DriveSubsystem extends SubsystemBase {
 
         // Send the offset to the navX in order to have the
         // compass on the dashboard appear at the correct heading.
-        navXGyro.setAngleAdjustment(gyroHeadingOffset);
+        if (navXGyro != null) {
+            navXGyro.setAngleAdjustment(gyroHeadingOffset);
+        }
     }
 
     /**
@@ -196,7 +201,11 @@ public class DriveSubsystem extends SubsystemBase {
      */
     public double getHeading() {
 
-        double gyroYawAngle = navXGyro.getYaw();
+        double gyroYawAngle = 0;
+
+        if (navXGyro != null) {
+            gyroYawAngle += navXGyro.getYaw();
+        }
 
         // Add the simulated angle to support simulation
         gyroYawAngle += simAngle;
@@ -253,7 +262,11 @@ public class DriveSubsystem extends SubsystemBase {
 
     public double getPitch() {
 
-        double gyroPitch = navXGyro.getPitch();
+        double gyroPitch = 0;
+
+        if (navXGyro != null) {
+            gyroPitch += navXGyro.getPitch();
+        }
 
         // adjust by the offset that was saved when the gyro
         // pitch was last set.
@@ -360,7 +373,9 @@ public class DriveSubsystem extends SubsystemBase {
         SmartDashboard.putNumber("Right Velocity", Math.round(getRightEncoderSpeed() * 100) / 100d);
         SmartDashboard.putNumber("Left Velocity", Math.round(getLeftEncoderSpeed() * 100) / 100d);
 
-        SmartDashboard.putData("Gyro", navXGyro);
+        if (navXGyro != null) {
+            SmartDashboard.putData("Gyro", navXGyro);
+        }
         SmartDashboard.putNumber("Gyro Heading", getHeading());
         SmartDashboard.putNumber("Gyro Pitch", getPitch());
 
